@@ -65,10 +65,10 @@ class BlackjackGame:
         for suit in suits:
             for value in values:
                 card_name = f"{value}_of_{suit}"
-                image_path = f"C:/Users/frein/OneDrive/Desktop/Raspberry Pi/playing-cards-assets-master/png/{card_name}.png"
+                image_path = f"Pfad zum Ordner *png*, der die Spielkarten enthält/{card_name}.png"          #Pfad!!
                 image = Image.open(image_path).resize((70, 100))
                 self.card_images[card_name] = ImageTk.PhotoImage(image)
-        back_image = Image.open("C:/Users/frein/OneDrive/Desktop/Raspberry Pi/playing-cards-assets-master/png/back.png").resize((70, 100))
+        back_image = Image.open("Pfad zum Ordner *png*, der die Spielkarten enthält").resize((70, 100))     #Pfad!!
         self.card_images["BACK"] = ImageTk.PhotoImage(back_image)
 
     def place_bet(self):
