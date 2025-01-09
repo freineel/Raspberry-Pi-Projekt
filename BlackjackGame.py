@@ -9,17 +9,17 @@ class BlackjackGame:
         
         self.player_cards = []
         self.dealer_cards = []
-        self.card_images = {}  # Kartenbilder
+        self.card_images = {}
         self.load_card_images()
-        self.balance = 100  # Startguthaben des Spielers
-        self.bet = 0  # Einsatz des Spielers
+        self.balance = 100
+        self.bet = 0
         self.round_active = False
 
-        # Canvas für den Tisch
+        # Canvas for the table
         self.canvas = tk.Canvas(root, width=800, height=600, bg="green")
         self.canvas.pack()
 
-        # GUI-Elemente
+        # GUI elements
         self.info_label = tk.Label(root, text="Willkommen bei Blackjack!", font=("Arial", 14), bg="green", fg="white")
         self.info_label.pack(pady=10)
         
@@ -53,27 +53,24 @@ class BlackjackGame:
         self.new_game_button = tk.Button(root, text="Neue Runde", command=self.new_game, state=tk.DISABLED)
         self.new_game_button.pack(pady=10)
 
-        # Positionen für Karten
+        # Positions for cards
         self.player_card_y = 400
         self.dealer_card_y = 100
         self.card_start_x = 300
         self.card_offset = 80
 
-    # Kartenbilder laden
     def load_card_images(self):
-        suits = ['clubs', 'diamonds', 'hearts', 'spades']  # Kreuz, Karo, Herz, Pik
+        suits = ['clubs', 'diamonds', 'hearts', 'spades']
         values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace']
         for suit in suits:
             for value in values:
                 card_name = f"{value}_of_{suit}"
                 image_path = f"C:/Users/frein/OneDrive/Desktop/Raspberry Pi/playing-cards-assets-master/png/{card_name}.png"
-                image = Image.open(image_path).resize((70, 100))  # Passe die Größe der Karte an
+                image = Image.open(image_path).resize((70, 100))
                 self.card_images[card_name] = ImageTk.PhotoImage(image)
-        # Rückseite der Karte
         back_image = Image.open("C:/Users/frein/OneDrive/Desktop/Raspberry Pi/playing-cards-assets-master/png/back.png").resize((70, 100))
         self.card_images["BACK"] = ImageTk.PhotoImage(back_image)
 
-    # Einsatz setzen
     def place_bet(self):
         try:
             self.bet = int(self.bet_entry.get())
@@ -92,36 +89,43 @@ class BlackjackGame:
         except ValueError:
             self.result_label.config(text="Bitte einen gültigen Betrag eingeben.")
 
-    # Karte auf dem Tisch anzeigen
     def draw_card_on_table(self, card_name, x, y):
         self.canvas.create_rectangle(x - 2, y - 2, x + 72, y + 102, fill="white", outline="black")
         self.canvas.create_image(x, y, image=self.card_images[card_name], anchor="nw")
 
-    # Erste Karten austeilen
     def initial_deal(self):
         self.player_cards = []
         self.dealer_cards = []
         self.canvas.delete("all")
         self.result_label.config(text="")
 
-        player_card = self.random_card()
+        player_card1 = self.random_card()
+        player_card2 = self.random_card()
         dealer_card = self.random_card()
         dealer_hidden_card = self.random_card()
 
-        self.player_cards.append(player_card)
+        self.player_cards.append(player_card1)
+        self.player_cards.append(player_card2)
         self.dealer_cards.append(dealer_card)
         self.dealer_cards.append(dealer_hidden_card)
 
-        # Karten auf dem Tisch anzeigen
-        self.draw_card_on_table(player_card, self.card_start_x, self.player_card_y)
+        self.draw_card_on_table(player_card1, self.card_start_x, self.player_card_y)
+        self.draw_card_on_table(player_card2, self.card_start_x + self.card_offset, self.player_card_y)
         self.draw_card_on_table(dealer_card, self.card_start_x, self.dealer_card_y)
         self.draw_card_on_table("BACK", self.card_start_x + self.card_offset, self.dealer_card_y)
 
-        # Punktestände aktualisieren
         self.player_score_label.config(text=f"Dein Punktestand: {self.calculate_score(self.player_cards)}")
         self.dealer_score_label.config(text="Dealer Punktestand: ?")
 
-    # Karte ziehen
+        if self.check_blackjack(self.player_cards):
+            self.end_game("Blackjack! Du gewinnst!")
+            self.balance += int(self.bet * 2.5)
+            self.balance_label.config(text=f"Guthaben: {self.balance}€")
+
+    def check_blackjack(self, cards):
+        values = [card.split('_')[0] for card in cards]
+        return ('ace' in values) and (any(v in ['10', 'jack', 'queen', 'king'] for v in values))
+
     def draw_card(self):
         if not self.round_active:
             return
@@ -131,18 +135,15 @@ class BlackjackGame:
         player_score = self.calculate_score(self.player_cards)
         self.player_score_label.config(text=f"Dein Punktestand: {player_score}")
         
-        # Karte für Spieler auf dem Tisch anzeigen
         self.draw_card_on_table(card, self.card_start_x + len(self.player_cards) * self.card_offset, self.player_card_y)
 
         if player_score > 21:
             self.end_game("Verloren! Dein Punktestand überschreitet 21.")
 
-    # Stehen bleiben
     def stand(self):
         if not self.round_active:
             return
 
-        # Verdeckte Karte aufdecken
         self.canvas.delete("all")
         for i, card in enumerate(self.dealer_cards):
             self.draw_card_on_table(card, self.card_start_x + i * self.card_offset, self.dealer_card_y)
@@ -154,29 +155,25 @@ class BlackjackGame:
             dealer_score = self.calculate_score(self.dealer_cards)
             self.draw_card_on_table(card, self.card_start_x + len(self.dealer_cards) * self.card_offset, self.dealer_card_y)
 
-        # Dealer Punktestand anzeigen
         self.dealer_score_label.config(text=f"Dealer Punktestand: {dealer_score}")
         
-        # Spielausgang prüfen
         player_score = self.calculate_score(self.player_cards)
         if dealer_score > 21 or player_score > dealer_score:
             self.end_game("Gewonnen! Du hast den Dealer besiegt!")
             self.balance += self.bet * 2
         elif player_score == dealer_score:
             self.end_game("Unentschieden!")
-            self.balance += self.bet  # Einsatz zurück
+            self.balance += self.bet
         else:
             self.end_game("Verloren! Der Dealer hat mehr Punkte.")
 
         self.balance_label.config(text=f"Guthaben: {self.balance}€")
 
-    # Zufällige Karte ziehen
     def random_card(self):
         suits = ['clubs', 'diamonds', 'hearts', 'spades']
         values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace']
         return f"{random.choice(values)}_of_{random.choice(suits)}"
 
-    # Punktestand berechnen
     def calculate_score(self, cards):
         values = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'jack': 10, 'queen': 10, 'king': 10, 'ace': 11}
         score = sum(values[card.split('_')[0]] for card in cards)
@@ -184,7 +181,6 @@ class BlackjackGame:
             score -= 10
         return score
 
-    # Spiel beenden
     def end_game(self, result):
         self.result_label.config(text=result)
         self.card_button.config(state=tk.DISABLED)
@@ -194,7 +190,6 @@ class BlackjackGame:
         self.bet_entry.config(state=tk.NORMAL)
         self.round_active = False
 
-    # Neue Runde starten
     def new_game(self):
         if self.round_active:
             return
@@ -211,7 +206,6 @@ class BlackjackGame:
         self.new_game_button.config(state=tk.DISABLED)
         self.round_active = False
 
-# GUI erstellen
 root = tk.Tk()
 game = BlackjackGame(root)
 root.mainloop()
