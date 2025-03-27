@@ -1,28 +1,28 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 import random
+import os
 
 class BlackjackGame:
     def __init__(self, root):
         self.root = root
         self.root.title("Blackjack")
-        
+
         self.player_cards = []
         self.dealer_cards = []
         self.card_images = {}
         self.load_card_images()
+
         self.balance = 100
         self.bet = 0
         self.round_active = False
 
-        # Canvas for the table
         self.canvas = tk.Canvas(root, width=800, height=600, bg="green")
         self.canvas.pack()
 
-        # GUI elements
         self.info_label = tk.Label(root, text="Willkommen bei Blackjack!", font=("Arial", 14), bg="green", fg="white")
         self.info_label.pack(pady=10)
-        
+
         self.balance_label = tk.Label(root, text=f"Guthaben: {self.balance}€", font=("Arial", 12), bg="green", fg="white")
         self.balance_label.pack(pady=5)
 
@@ -37,38 +37,41 @@ class BlackjackGame:
 
         self.player_score_label = tk.Label(root, text="Dein Punktestand: 0", font=("Arial", 12), bg="green", fg="white")
         self.player_score_label.pack(pady=5)
-        
+
         self.dealer_score_label = tk.Label(root, text="Dealer Punktestand: ?", font=("Arial", 12), bg="green", fg="white")
         self.dealer_score_label.pack(pady=5)
-        
+
         self.card_button = tk.Button(root, text="Karte ziehen", command=self.draw_card, state=tk.DISABLED)
         self.card_button.pack(pady=10)
-        
+
         self.stand_button = tk.Button(root, text="Stehen bleiben", command=self.stand, state=tk.DISABLED)
         self.stand_button.pack(pady=5)
-        
+
         self.result_label = tk.Label(root, text="", font=("Arial", 14), bg="green", fg="white")
         self.result_label.pack(pady=10)
 
         self.new_game_button = tk.Button(root, text="Neue Runde", command=self.new_game, state=tk.DISABLED)
         self.new_game_button.pack(pady=10)
 
-        # Positions for cards
         self.player_card_y = 400
         self.dealer_card_y = 100
         self.card_start_x = 300
         self.card_offset = 80
 
     def load_card_images(self):
+        base_path = os.path.join(os.path.dirname(__file__), "cards")
         suits = ['clubs', 'diamonds', 'hearts', 'spades']
         values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace']
+
         for suit in suits:
             for value in values:
                 card_name = f"{value}_of_{suit}"
-                image_path = f"Pfad zum Ordner *png*, der die Spielkarten enthält/{card_name}.png"          #Pfad!!
+                image_path = os.path.join(base_path, f"{card_name}.png")
                 image = Image.open(image_path).resize((70, 100))
                 self.card_images[card_name] = ImageTk.PhotoImage(image)
-        back_image = Image.open("Pfad zum Ordner *png*, der die Spielkarten enthält").resize((70, 100))     #Pfad!!
+
+        back_image_path = os.path.join(base_path, "back.png")
+        back_image = Image.open(back_image_path).resize((70, 100))
         self.card_images["BACK"] = ImageTk.PhotoImage(back_image)
 
     def place_bet(self):
@@ -104,10 +107,8 @@ class BlackjackGame:
         dealer_card = self.random_card()
         dealer_hidden_card = self.random_card()
 
-        self.player_cards.append(player_card1)
-        self.player_cards.append(player_card2)
-        self.dealer_cards.append(dealer_card)
-        self.dealer_cards.append(dealer_hidden_card)
+        self.player_cards.extend([player_card1, player_card2])
+        self.dealer_cards.extend([dealer_card, dealer_hidden_card])
 
         self.draw_card_on_table(player_card1, self.card_start_x, self.player_card_y)
         self.draw_card_on_table(player_card2, self.card_start_x + self.card_offset, self.player_card_y)
@@ -124,17 +125,15 @@ class BlackjackGame:
 
     def check_blackjack(self, cards):
         values = [card.split('_')[0] for card in cards]
-        return ('ace' in values) and (any(v in ['10', 'jack', 'queen', 'king'] for v in values))
+        return 'ace' in values and any(v in ['10', 'jack', 'queen', 'king'] for v in values)
 
     def draw_card(self):
         if not self.round_active:
             return
-
         card = self.random_card()
         self.player_cards.append(card)
         player_score = self.calculate_score(self.player_cards)
         self.player_score_label.config(text=f"Dein Punktestand: {player_score}")
-        
         self.draw_card_on_table(card, self.card_start_x + len(self.player_cards) * self.card_offset, self.player_card_y)
 
         if player_score > 21:
@@ -143,7 +142,6 @@ class BlackjackGame:
     def stand(self):
         if not self.round_active:
             return
-
         self.canvas.delete("all")
         for i, card in enumerate(self.dealer_cards):
             self.draw_card_on_table(card, self.card_start_x + i * self.card_offset, self.dealer_card_y)
@@ -156,8 +154,8 @@ class BlackjackGame:
             self.draw_card_on_table(card, self.card_start_x + len(self.dealer_cards) * self.card_offset, self.dealer_card_y)
 
         self.dealer_score_label.config(text=f"Dealer Punktestand: {dealer_score}")
-        
         player_score = self.calculate_score(self.player_cards)
+
         if dealer_score > 21 or player_score > dealer_score:
             self.end_game("Gewonnen! Du hast den Dealer besiegt!")
             self.balance += self.bet * 2
@@ -175,7 +173,8 @@ class BlackjackGame:
         return f"{random.choice(values)}_of_{random.choice(suits)}"
 
     def calculate_score(self, cards):
-        values = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'jack': 10, 'queen': 10, 'king': 10, 'ace': 11}
+        values = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+                  'jack': 10, 'queen': 10, 'king': 10, 'ace': 11}
         score = sum(values[card.split('_')[0]] for card in cards)
         if score > 21 and 'ace' in [card.split('_')[0] for card in cards]:
             score -= 10
@@ -206,6 +205,8 @@ class BlackjackGame:
         self.new_game_button.config(state=tk.DISABLED)
         self.round_active = False
 
-root = tk.Tk()
-game = BlackjackGame(root)
-root.mainloop()
+# Hauptprogramm
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = BlackjackGame(root)
+    root.mainloop()
